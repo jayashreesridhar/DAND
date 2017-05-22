@@ -26,6 +26,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 vectorizer = TfidfVectorizer(sublinear_tf=True, max_df=0.5,
                              stop_words='english')
 features_train = vectorizer.fit_transform(features_train)
+vocab_list = vectorizer.get_feature_names()
+#print vocab_list[14343]
 features_test  = vectorizer.transform(features_test).toarray()
 
 
@@ -36,8 +38,22 @@ features_train = features_train[:150].toarray()
 labels_train   = labels_train[:150]
 
 
-
 ### your code goes here
 
-
+## accuracy of decision trees
+from sklearn.metrics import accuracy_score
+from sklearn.tree import DecisionTreeClassifier
+import numpy as np
+clf=DecisionTreeClassifier()
+clf=clf.fit(features_train,labels_train)
+pred=clf.predict(features_test)
+print "accuracy",accuracy_score(pred,labels_test)
+importance=clf.feature_importances_
+count=0
+for i in importance:
+    if i >0.2:
+        count+=1
+print "count",count
+print max(importance)
+print np.argmax(importance)
 

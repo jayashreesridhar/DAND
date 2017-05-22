@@ -6,24 +6,43 @@ sys.path.append("../tools/")
 
 from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data
+from sklearn.metrics import accuracy_score
+from time import time
 
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
 ### The first feature must be "poi".
-features_list = ['poi','salary'] # You will need to use more features
-
+features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','from_poi_to_this_person','from_this_person_to_poi'] # You will need to use more features
+#features_list = ['poi','salary','bonus','long_term_incentive','total_payments','exercised_stock_options']
 ### Load the dictionary containing the dataset
 with open("final_project_dataset.pkl", "r") as data_file:
     data_dict = pickle.load(data_file)
 
 ### Task 2: Remove outliers
+data_dict.pop("TOTAL", 0)
 ### Task 3: Create new feature(s)
+
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
+#No of items in the dictionary
+print "Number of employees detail captured",len(data_dict)
+print "Number of features in the dataset",len(data_dict['CAUSEY RICHARD A'])
+
+#To find number of POI'sin the dataset
+poi_count=0
+for key in data_dict.keys():
+    if data_dict[key]["poi"]==1 :
+        poi_count+=1
+print "Number of POI's in the dataset",poi_count
 
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)
+
+# Example starting point. Try investigating other evaluation techniques!
+from sklearn.cross_validation import train_test_split
+features_train, features_test, labels_train, labels_test = \
+    train_test_split(features, labels, test_size=0.3, random_state=42)
 
 ### Task 4: Try a varity of classifiers
 ### Please name your classifier clf for easy export below.
@@ -34,7 +53,15 @@ labels, features = targetFeatureSplit(data)
 # Provided to give you a starting point. Try a variety of classifiers.
 from sklearn.naive_bayes import GaussianNB
 clf = GaussianNB()
-
+t0=time()
+clf.fit(features_train, labels_train)
+print "training time:", round(time()-t0, 3), "s"
+    ### use the trained classifier to predict labels for the test features
+t1=time()
+pred = clf.predict(features_test)
+print "predicting  time:", round(time()-t1, 3), "s"
+accuracy = accuracy_score(pred,labels_test)
+print accuracy
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
 ### folder for details on the evaluation method, especially the test_classifier
@@ -42,10 +69,7 @@ clf = GaussianNB()
 ### stratified shuffle split cross validation. For more info: 
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
-# Example starting point. Try investigating other evaluation techniques!
-from sklearn.cross_validation import train_test_split
-features_train, features_test, labels_train, labels_test = \
-    train_test_split(features, labels, test_size=0.3, random_state=42)
+
 
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure

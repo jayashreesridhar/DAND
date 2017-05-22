@@ -42,12 +42,13 @@ def Draw(pred, features, poi, mark_poi=False, name="image.png", f1_name="feature
 data_dict = pickle.load( open("../final_project/final_project_dataset.pkl", "r") )
 ### there's an outlier--remove it! 
 data_dict.pop("TOTAL", 0)
-
+print data_dict
 
 ### the input features we want to use 
 ### can be any key in the person-level dictionary (salary, director_fees, etc.) 
 feature_1 = "salary"
 feature_2 = "exercised_stock_options"
+feature_3='total_payments'
 poi  = "poi"
 features_list = [poi, feature_1, feature_2]
 data = featureFormat(data_dict, features_list )
@@ -65,7 +66,9 @@ plt.show()
 ### cluster here; create predictions of the cluster labels
 ### for the data and store them to a list called pred
 
-
+from sklearn.cluster import KMeans
+kmeans = KMeans(n_clusters=2).fit(finance_features)
+pred=kmeans.predict(finance_features)
 
 
 ### rename the "name" parameter when you change the number of features
@@ -74,3 +77,30 @@ try:
     Draw(pred, finance_features, poi, mark_poi=False, name="clusters.pdf", f1_name=feature_1, f2_name=feature_2)
 except NameError:
     print "no predictions object named pred found, no clusters to plot"
+    
+#Stock options Range
+stock_value=[]
+salary_value=[]
+for key in data_dict.keys():
+    if data_dict[key]['exercised_stock_options'] != 'NaN':
+        stock_value.append(data_dict[key]['exercised_stock_options'])
+    if data_dict[key]["salary"] != 'NaN' :
+        salary_value.append(data_dict[key]['salary'])
+stock_value.sort()
+salary_value.sort()
+print "min:",stock_value[0]
+print "max:",stock_value[len(stock_value)-1]
+print "min salary:",salary_value[0]
+print "max salary:",salary_value[len(salary_value)-1]
+
+# find rescaled values of salary=200,000 and exercised stock options of 1 million
+from sklearn.preprocessing import MinMaxScaler
+import numpy as np
+scaler=MinMaxScaler()
+
+rescaled_finance_features = scaler.fit_transform(finance_features)
+print finance_features
+
+financial_features_test = numpy.array([200000., 1000000.])
+financial_features_test_transformed = scaler.transform(financial_features_test)
+print financial_features_test_transformed

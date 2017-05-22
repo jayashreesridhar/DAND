@@ -27,5 +27,22 @@ labels, features = targetFeatureSplit(data)
 
 
 ### your code goes here 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn import cross_validation
+features_train,features_test,labels_train,labels_test=cross_validation.train_test_split(features,labels,test_size=0.3,random_state=42)
+clf=DecisionTreeClassifier()
+clf.fit(features_train,labels_train)
+pred=clf.predict(features_test)
+#if every test set has poi identifier as 0.0
+#labels_test=[0.0]*29
+print "UPDATED ACCURACY",accuracy_score(pred,labels_test)
+from collections import Counter
+input=labels_test
+c = Counter( input )
 
+#both actual and predicted label are 1
+print "predicted label",pred
+print "actual label",labels_test
 
+print( c.items() )
