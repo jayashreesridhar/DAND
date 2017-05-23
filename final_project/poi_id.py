@@ -13,8 +13,8 @@ from New_feature import computeFraction
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
 ### The first feature must be "poi".
-features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','from_poi_to_this_person','from_this_person_to_poi'] # You will need to use more features
-#features_list = ['poi','salary','bonus','long_term_incentive','total_payments','exercised_stock_options']
+#features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','from_poi_to_this_person','from_this_person_to_poi'] # You will need to use more features
+
 ### Load the dictionary containing the dataset
 with open("final_project_dataset.pkl", "r") as data_file:
     data_dict = pickle.load(data_file)
@@ -46,7 +46,15 @@ for name in data_dict:
 
 
 ## updated_features_list
-features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','fraction_from_poi','fraction_to_poi']
+#features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','fraction_from_poi','fraction_to_poi']
+features_list = ['poi','salary', 'deferral_payments', 'total_payments', 'loan_advances', 'bonus', 'restricted_stock_deferred', 'deferred_income', 'total_stock_value', 'expenses', 'exercised_stock_options', 'other', 'long_term_incentive', 'restricted_stock', 'director_fees',
+'to_messages','from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'shared_receipt_with_poi','fraction_from_poi','fraction_to_poi']
+
+#deferral_payments,bonus,deferred_income,expenses'long_term_incentive', 'restricted_stock','from_this_person_to_poi''fraction_to_poi'
+#`features_list =['poi','deferral_payments','bonus','deferred_income','expenses','long_term_incentive', 'restricted_stock']
+
+## kbest
+features_list=['poi','salary','bonus','total_stock_value','shared_receipt_with_poi','fraction_to_poi']
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 #No of items in the dictionary
@@ -68,16 +76,18 @@ labels, features = targetFeatureSplit(data)
 from sklearn.cross_validation import train_test_split
 features_train, features_test, labels_train, labels_test = \
     train_test_split(features, labels, test_size=0.3, random_state=42)
-    
-##PCA to analyse variance of features
-def doPCA():
-    from sklearn.decomposition import PCA
-    pca=PCA(n_components=6)
-    pca.fit(features)
-    return pca
-    
-pca=doPCA()
-print pca.explained_variance_ratio_
+
+
+## Select kbest
+
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
+k_value = SelectKBest(f_classif, k=4).fit(features_train,labels_train)
+print k_value.scores_
+features_train_k=k_value.transform(features_train)
+features_test_k=k_value.transform(features_test)
+
+
 
 ### Task 4: Try a varity of classifiers
 ### Please name your classifier clf for easy export below.
@@ -89,11 +99,11 @@ print pca.explained_variance_ratio_
 from sklearn.naive_bayes import GaussianNB
 clf = GaussianNB()
 t0=time()
-clf.fit(features_train, labels_train)
+clf.fit(features_train_k, labels_train)
 print "training time:", round(time()-t0, 3), "s"
     ### use the trained classifier to predict labels for the test features
 t1=time()
-pred = clf.predict(features_test)
+pred = clf.predict(features_test_k)
 print "predicting  time:", round(time()-t1, 3), "s"
 accuracy = accuracy_score(pred,labels_test)
 print accuracy
@@ -101,7 +111,7 @@ print accuracy
 ## Decision Tree Classifier
 
 from sklearn.tree import DecisionTreeClassifier
-clf=DecisionTreeClassifier(max_features="log2",max_leaf_nodes=30,max_depth=30)
+clf=DecisionTreeClassifier()
 clf=clf.fit(features_train,labels_train)
 pred=clf.predict(features_test)
 print "accuracy",accuracy_score(pred,labels_test)
@@ -111,11 +121,11 @@ print "accuracy",accuracy_score(pred,labels_test)
 
 #==============================================================================
 #==============================================================================
-#  from sklearn.svm import SVC
-#  from sklearn.grid_search import GridSearchCV
-#  import numpy as np
-#  print "Fitting the classifier to the training set"
-#  t0 = time()
+from sklearn.svm import SVC
+from sklearn.grid_search import GridSearchCV
+import numpy as np
+print "Fitting the classifier to the training set"
+t0 = time()
 #  C_range = np.logspace(-2, 10, 13)
 #  gamma_range = np.logspace(-9, 3, 13)
 #  param_grid = dict(gamma=gamma_range, C=C_range)
@@ -126,9 +136,9 @@ print "accuracy",accuracy_score(pred,labels_test)
 #           # }
 #  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
 #  clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
-#  clf=SVC(kernel='rbf',C=10.0,gamma=0.001)
-#  clf = clf.fit(features_train, labels_train)
-#  print "done in %0.3fs" % (time() - t0)
+clf=SVC(kernel='rbf')
+clf = clf.fit(features_train_k, labels_train)
+print "done in %0.3fs" % (time() - t0)
 #  print "Best estimator found by grid search:"
 #  #print clf.best_estimator_
 #  
@@ -137,11 +147,11 @@ print "accuracy",accuracy_score(pred,labels_test)
 #  # Quantitative evaluation of the model quality on the test set
 #  
 #  print "Predicting the people names on the testing set"
-#  t0 = time()
-#  y_pred = clf.predict(features_test)
-#  print "done in %0.3fs" % (time() - t0)
-#  accuracy = accuracy_score(pred,labels_test)
-#  print accuracy
+t0 = time()
+y_pred = clf.predict(features_test_k)
+print "done in %0.3fs" % (time() - t0)
+accuracy = accuracy_score(pred,labels_test)
+print accuracy
 #==============================================================================
 
 
