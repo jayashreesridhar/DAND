@@ -98,39 +98,54 @@ print "predicting  time:", round(time()-t1, 3), "s"
 accuracy = accuracy_score(pred,labels_test)
 print accuracy
 
+## Decision Tree Classifier
+
+from sklearn.tree import DecisionTreeClassifier
+clf=DecisionTreeClassifier(max_features="log2",max_leaf_nodes=30,max_depth=30)
+clf=clf.fit(features_train,labels_train)
+pred=clf.predict(features_test)
+print "accuracy",accuracy_score(pred,labels_test)
+#print clf.feature_importances_
+
 #SVM Rbf kernel
 
-from sklearn.svm import SVC
-from sklearn.grid_search import GridSearchCV
-import numpy as np
-print "Fitting the classifier to the training set"
-t0 = time()
-C_range = np.logspace(-2, 10, 13)
-gamma_range = np.logspace(-9, 3, 13)
-param_grid = dict(gamma=gamma_range, C=C_range)
+#==============================================================================
+#==============================================================================
+#  from sklearn.svm import SVC
+#  from sklearn.grid_search import GridSearchCV
+#  import numpy as np
+#  print "Fitting the classifier to the training set"
+#  t0 = time()
+#  C_range = np.logspace(-2, 10, 13)
+#  gamma_range = np.logspace(-9, 3, 13)
+#  param_grid = dict(gamma=gamma_range, C=C_range)
+#  
+#  #param_grid = {
+#          # 'C': [1e3, 5e3, 1e4, 5e4, 1e5],
+#          #  'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+#           # }
+#  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+#  clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
+#  clf=SVC(kernel='rbf',C=10.0,gamma=0.001)
+#  clf = clf.fit(features_train, labels_train)
+#  print "done in %0.3fs" % (time() - t0)
+#  print "Best estimator found by grid search:"
+#  #print clf.best_estimator_
+#  
+#  
+#  ###############################################################################
+#  # Quantitative evaluation of the model quality on the test set
+#  
+#  print "Predicting the people names on the testing set"
+#  t0 = time()
+#  y_pred = clf.predict(features_test)
+#  print "done in %0.3fs" % (time() - t0)
+#  accuracy = accuracy_score(pred,labels_test)
+#  print accuracy
+#==============================================================================
 
-#param_grid = {
-        # 'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-        #  'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-         # }
-# for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
-clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
-clf=SVC(kernel='rbf',C=10.0,gamma=0.001)
-clf = clf.fit(features_train, labels_train)
-print "done in %0.3fs" % (time() - t0)
-print "Best estimator found by grid search:"
-#print clf.best_estimator_
 
-
-###############################################################################
-# Quantitative evaluation of the model quality on the test set
-
-print "Predicting the people names on the testing set"
-t0 = time()
-y_pred = clf.predict(features_test)
-print "done in %0.3fs" % (time() - t0)
-accuracy = accuracy_score(pred,labels_test)
-print accuracy
+#==============================================================================
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
 ### folder for details on the evaluation method, especially the test_classifier
