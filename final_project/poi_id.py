@@ -9,6 +9,8 @@ from tester import dump_classifier_and_data
 from sklearn.metrics import accuracy_score
 from time import time
 from New_feature import computeFraction
+from tester import test_classifier
+from sklearn.metrics import classification_report
 
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
@@ -54,7 +56,7 @@ features_list = ['poi','salary', 'deferral_payments', 'total_payments', 'loan_ad
 #`features_list =['poi','deferral_payments','bonus','deferred_income','expenses','long_term_incentive', 'restricted_stock']
 
 ## kbest
-features_list=['poi','salary','bonus','total_stock_value','shared_receipt_with_poi','fraction_to_poi']
+features_list=['poi','exercised_stock_options','total_stock_value','bonus','salary','fraction_to_poi']
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 #No of items in the dictionary
@@ -71,6 +73,15 @@ print "Number of POI's in the dataset",poi_count
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)
+## Select features based on k scores
+from sklearn.feature_selection import SelectKBest
+k= 'all'
+k_best = SelectKBest(k=k)
+k_best.fit(features, labels)
+scores = k_best.scores_ # extract scores attribute
+pairs = zip(features_list[1:], scores) # zip with features_list
+pairs= sorted(pairs, key=lambda x: x[1], reverse= True) # sort tuples in descending order
+#print pairs
 
 # Example starting point. Try investigating other evaluation techniques!
 from sklearn.cross_validation import train_test_split
@@ -80,10 +91,10 @@ features_train, features_test, labels_train, labels_test = \
 
 ## Select kbest
 
-from sklearn.feature_selection import SelectKBest
+
 from sklearn.feature_selection import f_classif
 k_value = SelectKBest(f_classif, k=4).fit(features_train,labels_train)
-print k_value.scores_
+#print k_value.scores_
 features_train_k=k_value.transform(features_train)
 features_test_k=k_value.transform(features_test)
 
@@ -107,40 +118,36 @@ pred = clf.predict(features_test_k)
 print "predicting  time:", round(time()-t1, 3), "s"
 accuracy = accuracy_score(pred,labels_test)
 print accuracy
-
-## Decision Tree Classifier
-
+print classification_report(labels_test,pred)
+### Decision Tree Classifier
+#
 from sklearn.tree import DecisionTreeClassifier
-clf=DecisionTreeClassifier()
-clf=clf.fit(features_train,labels_train)
-pred=clf.predict(features_test)
+clf=DecisionTreeClassifier(max_features='log2',min_samples_split=6)
+clf=clf.fit(features_train_k,labels_train)
+pred=clf.predict(features_test_k)
 print "accuracy",accuracy_score(pred,labels_test)
-#print clf.feature_importances_
-
+print clf.feature_importances_
+print classification_report(labels_test,pred)
 #SVM Rbf kernel
 
 #==============================================================================
 #==============================================================================
 from sklearn.svm import SVC
 from sklearn.grid_search import GridSearchCV
-import numpy as np
 print "Fitting the classifier to the training set"
 t0 = time()
-#  C_range = np.logspace(-2, 10, 13)
-#  gamma_range = np.logspace(-9, 3, 13)
-#  param_grid = dict(gamma=gamma_range, C=C_range)
-#  
-#  #param_grid = {
-#          # 'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-#          #  'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-#           # }
-#  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
-#  clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
-clf=SVC(kernel='rbf')
+
+param_grid = {
+           'C': [0.1,0.5,0.7,1.5,2.0],
+            'gamma': [0.00015, 0.00005, 0.001, 0.005, 0.01, 0.1],
+            }
+##  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid,scoring='recall')
+#clf=SVC(kernel='rbf',C=0.1,gamma=0.00001)
 clf = clf.fit(features_train_k, labels_train)
 print "done in %0.3fs" % (time() - t0)
-#  print "Best estimator found by grid search:"
-#  #print clf.best_estimator_
+print "Best estimator found by grid search:"
+print clf.best_estimator_
 #  
 #  
 #  ###############################################################################
@@ -148,10 +155,23 @@ print "done in %0.3fs" % (time() - t0)
 #  
 #  print "Predicting the people names on the testing set"
 t0 = time()
-y_pred = clf.predict(features_test_k)
+pred = clf.predict(features_test_k)
 print "done in %0.3fs" % (time() - t0)
 accuracy = accuracy_score(pred,labels_test)
 print accuracy
+
+print classification_report(labels_test,pred)
+
+## KNN Classifier
+from sklearn.neighbors import KNeighborsClassifier
+clf = KNeighborsClassifier(n_neighbors=3,weights='distance')
+clf.fit(features_train_k, labels_train)
+pred=clf.predict(features_test_k)
+accuracy = accuracy_score(pred,labels_test)
+print accuracy
+print classification_report(labels_test,pred)
+
+#print test_classifier(clf, data, features_list)
 #==============================================================================
 
 
