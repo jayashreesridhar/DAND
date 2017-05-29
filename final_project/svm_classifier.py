@@ -17,6 +17,9 @@ from New_feature import computeFraction
 from tester import test_classifier
 from sklearn.svm import SVC
 from sklearn.grid_search import GridSearchCV
+from sklearn.preprocessing import MinMaxScaler
+import numpy as np
+from sklearn.metrics import classification_report
 
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
@@ -61,8 +64,7 @@ features_list = ['poi','salary', 'deferral_payments', 'total_payments', 'loan_ad
 #deferral_payments,bonus,deferred_income,expenses'long_term_incentive', 'restricted_stock','from_this_person_to_poi''fraction_to_poi'
 #`features_list =['poi','deferral_payments','bonus','deferred_income','expenses','long_term_incentive', 'restricted_stock']
 
-## kbest
-features_list=['poi','exercised_stock_options','total_stock_value','bonus','salary','fraction_to_poi']
+
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 #No of items in the dictionary
@@ -83,48 +85,89 @@ labels, features = targetFeatureSplit(data)
 from sklearn.feature_selection import SelectKBest
 k= 'all'
 k_best = SelectKBest(k=k)
-k_best.fit(features, labels)
+k_best=k_best.fit(features, labels)
+features_k=k_best.transform(features)
 scores = k_best.scores_ # extract scores attribute
 pairs = zip(features_list[1:], scores) # zip with features_list
 pairs= sorted(pairs, key=lambda x: x[1], reverse= True) # sort tuples in descending order
 #print pairs
-from sklearn.cross_validation import StratifiedShuffleSplit
-cv = StratifiedShuffleSplit(labels, 1000, random_state = 42)
-for train_idx, test_idx in cv: 
-        features_train = []
-        features_test  = []
-        labels_train   = []
-        labels_test    = []
-        for ii in train_idx:
-            features_train.append( features[ii] )
-            labels_train.append( labels[ii] )
-        for jj in test_idx:
-            features_test.append( features[jj] )
-            labels_test.append( labels[jj] )
-        
-        print "Fitting the classifier to the training set"
-        t0 = time()
-        param_grid = {
-           'C': [0.1,0.25,0.5,0.75,1.25,1.5],
-            'gamma': [0.00015, 0.0205, 0.008, 0.005, 0.01, 0.1],
-            }
-#  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
-        clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
-        #clf=SVC(kernel='rbf',C=100000.0,gamma=0.00001)
-        clf = clf.fit(features_train, labels_train)
-        print "done in %0.3fs" % (time() - t0)
-        print "Best estimator found by grid search:"
-        #print clf.best_estimator_
+## kbest
+features_list=['poi','exercised_stock_options','total_stock_value','bonus','salary','fraction_to_poi']
+## Features rescaling
+scaler=MinMaxScaler()
+
+rescaled_features = scaler.fit_transform(features_k)
+#print rescaled_features
+
+from sklearn.cross_validation import train_test_split
+features_train, features_test, labels_train, labels_test = \
+    train_test_split(rescaled_features, labels, test_size=0.3, random_state=42)
+# Train a SVM classification model
+
+print "Fitting the classifier to the training set"
+t0 = time()
+param_grid = {
+         'C': [1e3, 5e3, 1e4, 5e4,3e4,7e4, 1e5],
+          'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01,0.05,0.075, 0.1],
+          }
+# for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
+#clf=SVC(kernel='rbf',C=50000.0,gamma=0.01)
+clf = clf.fit(features_train,labels_train)
+print "done in %0.3fs" % (time() - t0)
+print "Best estimator found by grid search:"
+print clf.best_estimator_
+
+
+###############################################################################
+# Quantitative evaluation of the model quality on the test set
+
+print "Predicting the people names on the testing set"
+t0 = time()
+y_pred = clf.predict(features_test)
+print "done in %0.3fs" % (time() - t0)
+
+print classification_report(labels_test, y_pred)
+
+#from sklearn.cross_validation import StratifiedShuffleSplit
+#cv = StratifiedShuffleSplit(labels, 1000, random_state = 42)
+#for train_idx, test_idx in cv: 
+#        features_train = []
+#        features_test  = []
+#        labels_train   = []
+#        labels_test    = []
+#        for ii in train_idx:
+#            features_train.append( features[ii] )
+#            labels_train.append( labels[ii] )
+#        for jj in test_idx:
+#            features_test.append( features[jj] )
+#            labels_test.append( labels[jj] )
+#        
+#print "Fitting the classifier to the training set"
+#t0 = time()
+#param_grid = {
+#           'C': [0.1,0.25,0.5,0.75,1.25,1.5],
+#            'gamma': [0.00015, 0.0205, 0.008, 0.005, 0.01, 0.1],
+#            }
+##  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+#clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid,cv=cv)
+#        #clf=SVC(kernel='rbf',C=100000.0,gamma=0.00001)
+#clf = clf.fit(features, labels)
+#print "done in %0.3fs" % (time() - t0)
+#print "Best estimator found by grid search:"
+#        #print clf.best_estimator_
+#print("The best parameters are %s with a score of %0.2f"
+#      % (clf.best_params_, clf.best_score_))
 #  
 #  
 #  ###############################################################################
 #  # Quantitative evaluation of the model quality on the test set
 #  
 #  print "Predicting the people names on the testing set"
-        t0 = time()
-        y_pred = clf.predict(features_test)
-        print "done in %0.3fs" % (time() - t0)
-        accuracy = accuracy_score(y_pred,labels_test)
-        print accuracy
+#t0 = time()
+#y_pred = clf.predict(features_test)
+#        print "done in %0.3fs" % (time() - t0)
+#        accuracy = accuracy_score(y_pred,labels_test)
+#        print accuracy
 
 dump_classifier_and_data(clf, my_dataset, features_list)
