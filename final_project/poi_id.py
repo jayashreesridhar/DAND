@@ -15,6 +15,7 @@ from sklearn.ensemble import AdaBoostClassifier
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.grid_search import GridSearchCV
 #from xgboost.sklearn import XGBClassifier
 
 ### Task 1: Select what features you'll use.
@@ -54,13 +55,16 @@ for name in data_dict:
     bonus=data_point["bonus"]
     combine_salary_bonus=combine_feature(salary,bonus)
     data_point['combine_salary_bonus']=combine_salary_bonus
+    exercised_stock_options=data_point['exercised_stock_options']
+    total_stock_value=data_point['total_stock_value']
+    data_point['combine_stock_value']=combine_feature(exercised_stock_options,total_stock_value)
     
 
 
 ## updated_features_list
 
 features_list = ['poi','salary', 'deferral_payments', 'total_payments', 'loan_advances', 'bonus', 'restricted_stock_deferred', 'deferred_income', 'total_stock_value', 'expenses', 'exercised_stock_options', 'other', 'long_term_incentive', 'restricted_stock', 'director_fees',
-'to_messages','from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'shared_receipt_with_poi','fraction_from_poi','fraction_to_poi','combine_salary_bonus']
+'to_messages','from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'shared_receipt_with_poi','fraction_from_poi','fraction_to_poi','combine_salary_bonus','combine_stock_value']
 
 
 
@@ -120,7 +124,7 @@ pairs= sorted(pairs, key=lambda x: x[1], reverse= True) # sort tuples in descend
 print pairs
 
 ## kbest
-features_list=['poi',"exercised_stock_options",'combine_salary_bonus','fraction_to_poi']
+features_list=['poi','exercised_stock_options','combine_salary_bonus','fraction_to_poi']
 
 ## Features rescaling
 scaler=MinMaxScaler()
@@ -175,13 +179,20 @@ from sklearn.tree import DecisionTreeClassifier
 #print classification_report(labels_test,pred)
 
 ##ADABoostClassifier
-
-clf=AdaBoostClassifier(base_estimator=DecisionTreeClassifier(max_features='sqrt',min_samples_split=4,min_samples_leaf=2),n_estimators=10,learning_rate=0.1,algorithm='SAMME')
+param_grid = {
+        'n_estimators':[10,50,100,150,200],
+         'learning_rate':[0.1,0.5,0.75,1.0],
+          }
+# for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+clf = GridSearchCV(AdaBoostClassifier(base_estimator=DecisionTreeClassifier(max_features='log2',min_samples_split=3,min_samples_leaf=2),algorithm='SAMME'), param_grid)
+#clf=AdaBoostClassifier(base_estimator=DecisionTreeClassifier(max_features='log2',min_samples_split=4,min_samples_leaf=2),n_estimators=150,learning_rate=0.4,algorithm='SAMME')
 t0=time()
 clf.fit(features_train, labels_train)
 print "training time:", round(time()-t0, 3), "s"
     ### use the trained classifier to predict labels for the test features
 t1=time()
+print "Best estimator found by grid search:"
+print clf.best_estimator_
 pred = clf.predict(features_test)
 print "predicting  time:", round(time()-t1, 3), "s"
 accuracy = accuracy_score(pred,labels_test)
