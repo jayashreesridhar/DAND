@@ -8,9 +8,14 @@ from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data
 from sklearn.metrics import accuracy_score
 from time import time
-from New_feature import computeFraction
+from New_feature import computeFraction,combine_feature
 from tester import test_classifier
 from sklearn.metrics import classification_report
+from sklearn.ensemble import AdaBoostClassifier
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+#from xgboost.sklearn import XGBClassifier
 
 ### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
@@ -28,6 +33,7 @@ submit_dict = {}
 for name in data_dict:
 
     data_point = data_dict[name]
+    #data_point.keys()
 
     #print
     from_poi_to_this_person = data_point["from_poi_to_this_person"]
@@ -44,19 +50,21 @@ for name in data_dict:
     submit_dict[name]={"from_poi_to_this_person":fraction_from_poi,
                        "from_this_person_to_poi":fraction_to_poi}
     data_point["fraction_to_poi"] = fraction_to_poi
-#print data_dict['CAUSEY RICHARD A']
+    salary=data_point["salary"]
+    bonus=data_point["bonus"]
+    combine_salary_bonus=combine_feature(salary,bonus)
+    data_point['combine_salary_bonus']=combine_salary_bonus
+    
 
 
 ## updated_features_list
-#features_list = ['poi','salary','bonus','long_term_incentive','exercised_stock_options','fraction_from_poi','fraction_to_poi']
+
 features_list = ['poi','salary', 'deferral_payments', 'total_payments', 'loan_advances', 'bonus', 'restricted_stock_deferred', 'deferred_income', 'total_stock_value', 'expenses', 'exercised_stock_options', 'other', 'long_term_incentive', 'restricted_stock', 'director_fees',
-'to_messages','from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'shared_receipt_with_poi','fraction_from_poi','fraction_to_poi']
+'to_messages','from_poi_to_this_person', 'from_messages', 'from_this_person_to_poi', 'shared_receipt_with_poi','fraction_from_poi','fraction_to_poi','combine_salary_bonus']
 
-#deferral_payments,bonus,deferred_income,expenses'long_term_incentive', 'restricted_stock','from_this_person_to_poi''fraction_to_poi'
-#`features_list =['poi','deferral_payments','bonus','deferred_income','expenses','long_term_incentive', 'restricted_stock']
 
-## kbest
-features_list=['poi','exercised_stock_options','total_stock_value','bonus','salary','fraction_to_poi']
+
+    
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 #No of items in the dictionary
@@ -70,34 +78,58 @@ for key in data_dict.keys():
         poi_count+=1
 print "Number of POI's in the dataset",poi_count
 
+        
+
 ### Extract features and labels from dataset for local testing
 data = featureFormat(my_dataset, features_list, sort_keys = True)
 labels, features = targetFeatureSplit(data)
+
+# Correlation Matrix Plot
+import seaborn as sns
+import matplotlib.pyplot as plt
+sns.set(style="white")
+
+df = pd.DataFrame.from_dict(my_dataset, orient='index')
+# drop non-numeric features, replace NaN with zero
+df = df.drop('email_address', axis=1)
+# First replace string `NaN` with numpy nan
+df.replace(to_replace='NaN', value=np.nan, inplace=True)
+#count number of nan's in columns
+print df.isnull().sum()
+# then fill in nan
+df = df.fillna(0)
+#print df.head()
+# Compute the correlation matrix
+corr = df.corr()
+
+
+# Set up the matplotlib figure
+f, ax = plt.subplots(figsize=(12, 9))
+
+# Draw the heatmap using seaborn
+sns.heatmap(corr, vmax=.8, square=True)
 ## Select features based on k scores
 from sklearn.feature_selection import SelectKBest
 k= 'all'
 k_best = SelectKBest(k=k)
-k_best.fit(features, labels)
+k_best=k_best.fit(features, labels)
+features_k=k_best.transform(features)
 scores = k_best.scores_ # extract scores attribute
 pairs = zip(features_list[1:], scores) # zip with features_list
 pairs= sorted(pairs, key=lambda x: x[1], reverse= True) # sort tuples in descending order
-#print pairs
+print pairs
 
+## kbest
+features_list=['poi',"exercised_stock_options",'combine_salary_bonus','fraction_to_poi']
+
+## Features rescaling
+scaler=MinMaxScaler()
+
+rescaled_features = scaler.fit_transform(features_k)
 # Example starting point. Try investigating other evaluation techniques!
 from sklearn.cross_validation import train_test_split
 features_train, features_test, labels_train, labels_test = \
-    train_test_split(features, labels, test_size=0.3, random_state=42)
-
-
-## Select kbest
-
-
-from sklearn.feature_selection import f_classif
-k_value = SelectKBest(f_classif, k=4).fit(features_train,labels_train)
-#print k_value.scores_
-features_train_k=k_value.transform(features_train)
-features_test_k=k_value.transform(features_test)
-
+    train_test_split(rescaled_features, labels, test_size=0.3, random_state=42)
 
 
 ### Task 4: Try a varity of classifiers
@@ -107,71 +139,57 @@ features_test_k=k_value.transform(features_test)
 ### http://scikit-learn.org/stable/modules/pipeline.html
 
 # Provided to give you a starting point. Try a variety of classifiers.
-from sklearn.naive_bayes import GaussianNB
-clf = GaussianNB()
-t0=time()
-clf.fit(features_train_k, labels_train)
-print "training time:", round(time()-t0, 3), "s"
-    ### use the trained classifier to predict labels for the test features
-t1=time()
-pred = clf.predict(features_test_k)
-print "predicting  time:", round(time()-t1, 3), "s"
-accuracy = accuracy_score(pred,labels_test)
-print accuracy
-print classification_report(labels_test,pred)
+#from sklearn.naive_bayes import GaussianNB
+#clf = GaussianNB()
+#t0=time()
+#clf.fit(features_train, labels_train)
+#print "training time:", round(time()-t0, 3), "s"
+#    ### use the trained classifier to predict labels for the test features
+#t1=time()
+#pred = clf.predict(features_test)
+#print "predicting  time:", round(time()-t1, 3), "s"
+#accuracy = accuracy_score(pred,labels_test)
+#print accuracy
+#print classification_report(labels_test,pred)
 ### Decision Tree Classifier
 #
 from sklearn.tree import DecisionTreeClassifier
-clf=DecisionTreeClassifier(max_features='log2',min_samples_split=6)
-clf=clf.fit(features_train_k,labels_train)
-pred=clf.predict(features_test_k)
-print "accuracy",accuracy_score(pred,labels_test)
-print clf.feature_importances_
-print classification_report(labels_test,pred)
+#clf=DecisionTreeClassifier(max_features='log2',min_samples_split=6)
+#clf=clf.fit(features_train_k,labels_train)
+#pred=clf.predict(features_test_k)
+#print "accuracy",accuracy_score(pred,labels_test)
+#print clf.feature_importances_
+#print classification_report(labels_test,pred)
 #SVM Rbf kernel
 
 #==============================================================================
 #==============================================================================
-from sklearn.svm import SVC
-from sklearn.grid_search import GridSearchCV
-print "Fitting the classifier to the training set"
-t0 = time()
-
-param_grid = {
-           'C': [0.1,0.5,0.7,1.5,2.0],
-            'gamma': [0.00015, 0.00005, 0.001, 0.005, 0.01, 0.1],
-            }
-##  # for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
-clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid,scoring='recall')
-#clf=SVC(kernel='rbf',C=0.1,gamma=0.00001)
-clf = clf.fit(features_train_k, labels_train)
-print "done in %0.3fs" % (time() - t0)
-print "Best estimator found by grid search:"
-print clf.best_estimator_
-#  
-#  
-#  ###############################################################################
-#  # Quantitative evaluation of the model quality on the test set
-#  
-#  print "Predicting the people names on the testing set"
-t0 = time()
-pred = clf.predict(features_test_k)
-print "done in %0.3fs" % (time() - t0)
-accuracy = accuracy_score(pred,labels_test)
-print accuracy
-
-print classification_report(labels_test,pred)
 
 ## KNN Classifier
-from sklearn.neighbors import KNeighborsClassifier
-clf = KNeighborsClassifier(n_neighbors=3,weights='distance')
-clf.fit(features_train_k, labels_train)
-pred=clf.predict(features_test_k)
+#from sklearn.neighbors import KNeighborsClassifier
+#clf = KNeighborsClassifier(n_neighbors=10,weights='distance')
+#clf.fit(features_train, labels_train)
+#pred=clf.predict(features_test)
+#accuracy = accuracy_score(pred,labels_test)
+#print accuracy
+#print classification_report(labels_test,pred)
+
+##ADABoostClassifier
+
+clf=AdaBoostClassifier(base_estimator=DecisionTreeClassifier(max_features='sqrt',min_samples_split=4,min_samples_leaf=2),n_estimators=10,learning_rate=0.1,algorithm='SAMME')
+t0=time()
+clf.fit(features_train, labels_train)
+print "training time:", round(time()-t0, 3), "s"
+    ### use the trained classifier to predict labels for the test features
+t1=time()
+pred = clf.predict(features_test)
+print "predicting  time:", round(time()-t1, 3), "s"
 accuracy = accuracy_score(pred,labels_test)
 print accuracy
 print classification_report(labels_test,pred)
 
-#print test_classifier(clf, data, features_list)
+
+
 #==============================================================================
 
 
